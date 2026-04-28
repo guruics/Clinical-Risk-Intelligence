@@ -1,0 +1,29 @@
+import requests
+from src.connectors.athena.config import ATHENA_BASE_URL, practice_id
+from src.connectors.athena.auth import AthenaAuth
+
+
+class AthenaClient:
+
+    def __init__(self):
+        self.auth = AthenaAuth()
+
+    def _headers(self):
+        return {
+            "Authorization": f"Bearer {self.auth.get_token()}",
+            "Content-Type": "application/json"
+        }
+
+    def get_patients(self, practice_id=None, limit=10):
+
+        pid = practice_id or self.config.practice_id
+
+        url = f"{self.config.base_url}/v1/{pid}/patients"
+
+        response = requests.get(
+            url,
+            headers=self._headers(),
+            params={"limit": limit}
+        )
+
+        return response.json()
