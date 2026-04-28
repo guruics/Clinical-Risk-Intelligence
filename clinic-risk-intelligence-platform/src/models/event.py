@@ -1,5 +1,5 @@
 ﻿from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, Literal
+from typing import Optional, Dict, Any, Literal, List
 from datetime import datetime
 
 
@@ -82,7 +82,7 @@ class UnifiedEvent(BaseModel):
     # -------------------------
     # Risk Enrichment (computed later)
     # -------------------------
-    risk_flags: Optional[list[str]] = Field(default_factory=list)
+    risk_flags: Optional[List[str]] = Field(default_factory=list)
     risk_score: Optional[float] = None
     risk_domain: Optional[str] = None
 
