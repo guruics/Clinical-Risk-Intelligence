@@ -102,7 +102,7 @@ Exposes risk insights and event data to dashboards and external systems.
 
 ## 📊 Unified Event Schema
 
-```json
+...json
 {
   "timestamp": "",
   "system": "openemr | athena | ecw | kareo | hl7",
@@ -114,23 +114,25 @@ Exposes risk insights and event data to dashboards and external systems.
   "metadata": {}
 }
 
-📈 Outputs
+## Outputs
 
 The system produces:
 
-Clinic Risk Index (0–100)
-Domain-level risk scores
-User-level risk profiles
-Alert stream (high-risk events)
-Audit-ready summaries
-🔐 Design Principles
+-  Clinic Risk Index (0–100)
+-  Domain-level risk scores
+-  User-level risk profiles
+-  Alert stream (high-risk events)
+-  Audit-ready summaries
+
+## Design Principles
 Read-only access to clinic systems
 Non-intrusive deployment
 No disruption to clinical workflows
 Compliance-aware (HIPAA-aligned design principles)
 Connector-first architecture
 AI-ready event foundation
-⚙️ MVP Scope
+
+## MVP Scope
 
 The initial MVP focuses on:
 
@@ -139,22 +141,23 @@ One billing connector
 Basic HL7/FHIR ingestion (optional)
 Rule-based risk engine (no ML dependency)
 Simple dashboard/API output
-🧭 Future Roadmap
+
+## Future Roadmap
 AI-driven anomaly detection
 Predictive risk modeling
 Cross-clinic benchmarking (anonymized)
 Real-time streaming ingestion
 Automated compliance reporting
-🛠️ Tech Stack (Planned)
+
+## Tech Stack (Planned)
 Backend: Python (FastAPI)
 Database: PostgreSQL / TimescaleDB
 Event Processing: Python workers
 Connectors: API / DB / HL7 listeners
 Frontend: React dashboard (planned)
-📌 Disclaimer
+
+## Disclaimer
 
 This system is designed for risk visibility and operational intelligence only. It does not replace clinical decision systems or provide medical advice. All outputs are intended for administrative and compliance support purposes.
-
-📬 Status
 
 Early-stage design and MVP development.
