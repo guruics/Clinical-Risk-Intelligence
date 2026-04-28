@@ -102,7 +102,7 @@ Exposes risk insights and event data to dashboards and external systems.
 
 ## 📊 Unified Event Schema
 
-...json
+```json
 {
   "timestamp": "",
   "system": "openemr | athena | ecw | kareo | hl7",
@@ -113,6 +113,7 @@ Exposes risk insights and event data to dashboards and external systems.
   "resource_id": "",
   "metadata": {}
 }
+```
 
 ## Outputs
 
