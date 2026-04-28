@@ -1,0 +1,1 @@
+﻿# Unified event schema
