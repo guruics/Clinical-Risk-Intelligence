@@ -3,7 +3,6 @@ from datetime import datetime
 from src.models.event import UnifiedEvent
 from src.engine.rule_engine import RuleEngine
 
-# Import rules
 from src.engine.rules.access_rules import UnauthorizedPHIAccessRule, AfterHoursAccessRule
 from src.engine.rules.billing_rules import BillingWithoutEncounterRule
 from src.engine.rules.clinical_pattern_rules import (
@@ -16,7 +15,6 @@ from src.engine.rules.clinical_pattern_rules import (
 def build_engine():
     engine = RuleEngine()
 
-    # Register rules manually (MVP)
     engine.register_rule(UnauthorizedPHIAccessRule())
     engine.register_rule(AfterHoursAccessRule())
     engine.register_rule(BillingWithoutEncounterRule())
@@ -27,65 +25,56 @@ def build_engine():
     return engine
 
 
-def test_unauthorized_access():
+def run_tests():
     engine = build_engine()
 
-    event = UnifiedEvent(
-        event_id="test-1",
-        timestamp=datetime.utcnow(),
-        system="openemr",
-        user_id="staff_1",
-        role="billing",
-        event_type="ACCESS",
-        resource_type="PATIENT"
-    )
+    tests = [
+        {
+            "name": "Unauthorized PHI Access",
+            "event": UnifiedEvent(
+                event_id="t1",
+                timestamp=datetime.utcnow(),
+                system="openemr",
+                user_id="billing_user",
+                role="billing",
+                event_type="ACCESS",
+                resource_type="PATIENT"
+            )
+        },
+        {
+            "name": "Bulk Access Scenario",
+            "event": UnifiedEvent(
+                event_id="t2",
+                timestamp=datetime.utcnow(),
+                system="openemr",
+                user_id="staff_1",
+                role="reception",
+                event_type="ACCESS",
+                resource_type="PATIENT",
+                metadata={"records_accessed": 120}
+            )
+        },
+        {
+            "name": "Billing Without Encounter",
+            "event": UnifiedEvent(
+                event_id="t3",
+                timestamp=datetime.utcnow(),
+                system="openemr",
+                user_id="billing_2",
+                role="billing",
+                event_type="BILL",
+                resource_type="CLAIM"
+            )
+        }
+    ]
 
-    findings = engine.evaluate(event)
+    for t in tests:
+        findings = engine.evaluate(t["event"])
 
-    print("\nTest: Unauthorized Access")
-    print(findings)
-
-
-def test_bulk_access():
-    engine = build_engine()
-
-    event = UnifiedEvent(
-        event_id="test-2",
-        timestamp=datetime.utcnow(),
-        system="openemr",
-        user_id="staff_2",
-        role="reception",
-        event_type="ACCESS",
-        resource_type="PATIENT",
-        metadata={"records_accessed": 120}
-    )
-
-    findings = engine.evaluate(event)
-
-    print("\nTest: Bulk Access")
-    print(findings)
-
-
-def test_billing_issue():
-    engine = build_engine()
-
-    event = UnifiedEvent(
-        event_id="test-3",
-        timestamp=datetime.utcnow(),
-        system="openemr",
-        user_id="billing_1",
-        role="billing",
-        event_type="BILL",
-        resource_type="CLAIM"
-    )
-
-    findings = engine.evaluate(event)
-
-    print("\nTest: Billing Without Encounter")
-    print(findings)
+        print("\n==============================")
+        print(f"Test: {t['name']}")
+        print("Findings:", findings)
 
 
 if __name__ == "__main__":
-    test_unauthorized_access()
-    test_bulk_access()
-    test_billing_issue()
+    run_tests()
