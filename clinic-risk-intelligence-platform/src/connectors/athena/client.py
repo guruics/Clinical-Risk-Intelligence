@@ -3,9 +3,17 @@ from src.connectors.athena.config import ATHENA_BASE_URL, practice_id
 from src.connectors.athena.auth import AthenaAuth
 
 
+class AthenaConfig:
+    def __init__(self):
+        self.base_url = ATHENA_BASE_URL
+        self.practice_id = practice_id
+
+
 class AthenaClient:
 
-    def __init__(self):
+    def __init__(self, token=None):
+        self.token = token
+        self.config = AthenaConfig()
         self.auth = AthenaAuth()
 
     def _headers(self):
@@ -14,16 +22,26 @@ class AthenaClient:
             "Content-Type": "application/json"
         }
 
-    def get_patients(self, practice_id=None, limit=10):
+    def get_patients(self, searchterm: str = "SMITH", limit: int = 50):
+        """
+        Returns CLEAN list[dict], NOT raw response
+        """
 
-        pid = practice_id or self.config.practice_id
+        pid = self.config.practice_id
 
-        url = f"{self.config.base_url}/v1/{pid}/patients"
+        url = f"{self.config.base_url}/v1/{pid}/patients/search"
 
         response = requests.get(
             url,
             headers=self._headers(),
-            params={"limit": limit}
+             params={
+            "searchterm": searchterm   # ✅ REQUIRED BY ATHENA
+        }
         )
 
-        return response.json()
+        response.raise_for_status()
+
+        data = response.json()
+
+        # 🔴 CRITICAL FIX: return ONLY list
+        return data.get("patients", [])

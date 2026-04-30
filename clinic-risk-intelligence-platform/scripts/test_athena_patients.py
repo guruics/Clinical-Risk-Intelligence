@@ -53,6 +53,15 @@ def test_athena_patient_search():
         result = validate_patient_schema(p)
         validation_results.append(result)
 
+    from src.normalization.athena_event_mapper import AthenaEventMapper
+
+    mapper = AthenaEventMapper()
+    events = mapper.map_patient_search_response(data)
+    print("UNIFIED EVENTS CREATED:", len(events))
+
+    for e in events[:2]:
+        print(e)
+
     # Summary report
     invalid = [r for r in validation_results if not r["valid"]]
 
@@ -68,4 +77,4 @@ def test_athena_patient_search():
 
 if __name__ == "__main__":
     test_athena_patient_search()
-    
+

@@ -1,8 +1,18 @@
 ﻿# Access rules
 from src.engine.rules.base import RiskRule
 
+class UnauthorizedPHIAccessRule:
+    def evaluate(self, event):
+        if event.event_type == "ACCESS" and event.resource_type == "PATIENT":
+            return {
+                "rule_name": "Unauthorized PHI Access",
+                "category": "PHI_ACCESS",
+                "severity": "HIGH",
+                "event_id": event.event_id
+            }
+        return None
 
-class UnauthorizedPHIAccessRule(RiskRule):
+class UnauthorizedPHIAccessRule1(RiskRule):
 
     def evaluate(self, event):
         if event.event_type != "ACCESS":
