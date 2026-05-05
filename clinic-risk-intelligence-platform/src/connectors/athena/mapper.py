@@ -2,14 +2,18 @@ import time
 
 class AthenaEventMapper:
 
+    print("I  am in Mapper.AthenaEventMapper _ 0")
+
     @staticmethod
     def from_patients(patients: list):
         events = []
 
         for p in patients:
+            print("I  am in Mapper.AthenaEventMapper _ 1"),
             event = {
+                
                 "event_id": f"athena-patient-{p.get('patientid')}-{time.time()}",
-                "event_type": "PATIENT_ACCESS",
+                "event_type": "ACCESS",
                 "source": "ATHENA",
                 "timestamp": time.time(),
 
@@ -24,6 +28,7 @@ class AthenaEventMapper:
 
                 # Raw payload (optional, useful later)
                 "raw": p
+                
             }
 
             events.append(event)

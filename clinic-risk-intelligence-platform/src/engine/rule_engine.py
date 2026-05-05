@@ -1,6 +1,7 @@
 ﻿# Rule engine core
 from typing import List
 from src.models.event import UnifiedEvent
+from src.engine.rule_registry import RuleRegistry
 
 
 class RuleEngine:
@@ -10,17 +11,37 @@ class RuleEngine:
     """
 
     def __init__(self):
-        self.rules = []
+        self.registry = RuleRegistry()
 
-    def register_rule(self, rule):
-        self.rules.append(rule)
-
-    def evaluate(self, event: UnifiedEvent) -> List[dict]:
+    def evaluate(self, event: UnifiedEvent, context=None) -> List[dict]:
         findings = []
+        print("Evaluating event in RuleEngine:", event)
 
-        for rule in self.rules:
-            result = rule.evaluate(event)
-            if result:
-                findings.append(result)
+        # ---------------------------------
+        # Resolve API
+        # ---------------------------------
+        api = event.metadata.get("athena_api", "unknown")
+
+        # ---------------------------------
+        # Fetch rules (DO NOT store in self.rules)
+        # ---------------------------------
+        rules = self.registry.get_rules_for_api(api)
+
+        # ---------------------------------
+        # Execute rules safely
+        # ---------------------------------
+        for rule in rules:
+            try:
+                result = rule.evaluate(event, context)
+                if not result:
+                    continue
+
+                if isinstance(result, list):
+                    findings.extend(result)
+                else:
+                    findings.append(result)
+
+            except Exception as e:
+                print(f"[ERROR] {rule.__class__.__name__}: {e}")
 
         return findings

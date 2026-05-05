@@ -33,7 +33,17 @@ def get_risk_summary():
     return {
         "risk_score": result["risk_score"],
         "risk_level": result["risk_level"],
-        "breakdown": result["breakdown"]
+        "breakdown":  [
+            {
+            **item,
+            "api": item.get("source_api", "unknown")
+        }
+        for item in result["breakdown"]
+    
+        ]
+        
+        
+        
     }
 
 
@@ -44,8 +54,8 @@ def update_findings(findings: list):
     return {"status": "updated", "count": len(findings)}
 
 @app.post("/risk/run")
-def run_risk():
-    result =  run_athena_risk_pipeline()
+def run_risk(mode: str = "patients_search"):
+    result =  run_athena_risk_pipeline(mode)
     LATEST_FINDINGS.clear()
     LATEST_FINDINGS.extend(result["findings"])
     return result

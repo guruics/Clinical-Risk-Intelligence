@@ -10,7 +10,7 @@ class AthenaEventMapper:
     Converts Athena API responses into UnifiedEvent objects
     for ingestion into the Risk Intelligence Engine.
     """
-
+    print("I am in AthenaEventMapper _ 0")
     def __init__(self):
         self.system = SystemType.ATHENA if hasattr(SystemType, "ATHENA") else "ATHENA"
 
@@ -22,11 +22,12 @@ class AthenaEventMapper:
         """
         Converts Athena patient search results → UnifiedEvents
         """
-
+        print("I am in AthenaEventMapper.map_patient_search_response _ 0")
         patients = response.get("patients", [])
         events: List[UnifiedEvent] = []
 
         for patient in patients:
+            print("I am in AthenaEventMapper.map_patient_search_response _ 1")
             event = self._map_single_patient(patient, actor_user_id)
             events.append(event)
 
@@ -41,7 +42,7 @@ class AthenaEventMapper:
         patient_id = patient.get("patientid")
 
         # Athena does NOT always provide timestamp → use ingestion time
-        now = datetime.utcnow()
+        now = datetime.now()
 
         return UnifiedEvent(
             event_id=f"athena-patient-{patient_id}-{now.timestamp()}",
@@ -64,6 +65,9 @@ class AthenaEventMapper:
                 "sex": patient.get("sex"),
                 "state": patient.get("state"),
                 "zip": patient.get("zip"),
-                "raw": patient
+                "raw": patient,
+                "athena_api": "patients.search",   # 🔥 REQUIRED
+                "endpoint": "/v1/{practiceid}/patients/search",
+                "module": "PATIENT"
             }
         )

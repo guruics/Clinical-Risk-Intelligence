@@ -6,11 +6,10 @@ class RiskRule(ABC):
     """
     Base class for all risk detection rules.
     """
+    RULE_TYPE = "event"  # or "batch"
 
-    @abstractmethod
-    def evaluate(self, event: UnifiedEvent):
-        """
-        Return:
-            dict (risk finding) OR None
-        """
-        pass
+    def evaluate(self, event, context=None):
+        return None
+
+    def evaluate_batch(self, events, context=None):
+        return None

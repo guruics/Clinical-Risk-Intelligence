@@ -1,156 +1,251 @@
 import React, { useEffect, useState } from "react";
 import {
-  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
   YAxis,
   Tooltip,
+  CartesianGrid,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Legend
 } from "recharts";
 
-const API_BASE = "http://127.0.0.1:8000";
-
-// Simple UI replacements (no shadcn dependency)
-const Card = ({ children }) => (
-  <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16, background: "#fff" }}>
-    {children}
-  </div>
-);
-
-const CardContent = ({ children }) => <div>{children}</div>;
-
-const Button = ({ children, onClick, disabled }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    style={{
-      padding: "10px 14px",
-      borderRadius: 6,
-      border: "1px solid #333",
-      cursor: disabled ? "not-allowed" : "pointer",
-      opacity: disabled ? 0.6 : 1
-    }}
-  >
-    {children}
-  </button>
-);
+const COLORS = [
+  "#8884d8",
+  "#82ca9d",
+  "#ffc658",
+  "#ff7f7f",
+  "#00C49F",
+  "#0088FE",
+  "#FFBB28",
+  "#FF8042"
+];
 
 export default function RiskDashboard() {
   const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const fetchSummary = async () => {
-    const res = await fetch(`${API_BASE}/risk/summary`);
-    const data = await res.json();
-    setSummary(data);
-  };
-
-  const runPipeline = async () => {
-    setLoading(true);
-    await fetch(`${API_BASE}/risk/run`, { method: "POST" });
-    await fetchSummary();
-    setLoading(false);
-  };
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedRule, setSelectedRule] = useState(null);
 
   useEffect(() => {
-    fetchSummary();
+    fetch("http://localhost:8000/risk/summary")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("SUMMARY RESPONSE:", data);
+        setSummary(data);
+      })
+      .catch((err) => console.error(err));
   }, []);
 
-  const breakdownData = summary?.breakdown || [];
+  if (!summary) return <div>Loading...</div>;
 
-  const pieData = breakdownData.map((b) => ({
-    name: b.category,
-    value: b.weighted_score || 0
+  // -----------------------------
+  // SAFE BREAKDOWN HANDLING
+  // -----------------------------
+  const breakdown = Array.isArray(summary.breakdown)
+    ? summary.breakdown
+    : [];
+
+  // -----------------------------
+  // CATEGORY AGGREGATION
+  // -----------------------------
+  const categoryMap = {};
+
+  breakdown.forEach((item) => {
+    const cat = item.category || "UNKNOWN";
+    categoryMap[cat] = (categoryMap[cat] || 0) + (item.weighted_score || 0);
+  });
+
+  const chartData = Object.keys(categoryMap).map((key) => ({
+    name: key,
+    value: categoryMap[key]
   }));
 
+  // -----------------------------
+  // RULE AGGREGATION (DRILLDOWN LEVEL 1)
+  // -----------------------------
+  const buildRuleData = (items, category) => {
+    const ruleMap = {};
+
+    items
+      .filter((i) => !category || i.category === category)
+      .forEach((item) => {
+        const key = item.rule;
+
+        if (!ruleMap[key]) {
+          ruleMap[key] = {
+            rule: item.rule,
+            category: item.category,
+            severity: item.severity,
+            total_score: 0,
+            occurrences: 0,
+            events: []
+          };
+        }
+
+        ruleMap[key].total_score += item.weighted_score || 0;
+        ruleMap[key].occurrences += 1;
+
+        if (item.event_id) {
+          ruleMap[key].events.push(item.event_id);
+        }
+      });
+
+    return Object.values(ruleMap);
+  };
+
+  const filteredRules = selectedCategory
+    ? buildRuleData(breakdown, selectedCategory)
+    : [];
+
+  const selectedRuleData =
+    selectedRule &&
+    filteredRules.find((r) => r.rule === selectedRule.rule);
+
+  // -----------------------------
+  // COLOR MAPPING
+  // -----------------------------
+  const colorMap = {};
+  chartData.forEach((entry, index) => {
+    colorMap[entry.name] = COLORS[index % COLORS.length];
+  });
+
   return (
-    <div style={{ padding: 24, display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1>Risk Intelligence Dashboard</h1>
-        <Button onClick={runPipeline} disabled={loading}>
-          {loading ? "Running..." : "Run Risk Pipeline"}
-        </Button>
-      </div>
+    <div style={{ padding: "20px", fontFamily: "Arial" }}>
+      <h2>Risk Dashboard</h2>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-        <Card>
-          <CardContent>
-            <div>Risk Score</div>
-            <h2>{summary?.risk_score ?? 0}</h2>
-          </CardContent>
-        </Card>
+      <h3>
+        Risk Score:{" "}
+        {summary?.risk_score !== undefined ? summary.risk_score : "N/A"}
+      </h3>
+      <h4>
+        Risk Level:{" "}
+        {summary?.risk_level ? summary.risk_level : "N/A"}
+      </h4>
 
-        <Card>
-          <CardContent>
-            <div>Risk Level</div>
-            <h2>{summary?.risk_level ?? "LOW"}</h2>
-          </CardContent>
-        </Card>
+      {/* -----------------------------
+          LEVEL 0 - CATEGORY VIEW
+      ----------------------------- */}
+      {!selectedCategory && (
+        <>
+          <BarChart width={650} height={300} data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
 
-        <Card>
-          <CardContent>
-            <div>Findings</div>
-            <h2>{breakdownData.length}</h2>
-          </CardContent>
-        </Card>
-      </div>
+            <Bar
+              dataKey="value"
+              onClick={(data) => {
+                setSelectedCategory(data.name);
+                setSelectedRule(null);
+              }}
+            >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`bar-${index}`}
+                  fill={colorMap[entry.name]}
+                />
+              ))}
+            </Bar>
+          </BarChart>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <Card>
-          <CardContent>
-            <h3>Risk Breakdown</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={breakdownData}>
-                <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="weighted_score" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          <PieChart width={450} height={350}>
+            <Pie
+              data={chartData}
+              dataKey="value"
+              nameKey="name"
+              outerRadius={130}
+              label={({ name, percent }) =>
+                `${name} ${(percent * 100).toFixed(0)}%`
+              }
+              onClick={(data) => {
+                setSelectedCategory(data.name);
+                setSelectedRule(null);
+              }}
+            >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`pie-${index}`}
+                  fill={colorMap[entry.name]}
+                />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </>
+      )}
 
-        <Card>
-          <CardContent>
-            <h3>Risk Distribution</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  outerRadius={100}
-                  label
+      {/* -----------------------------
+          LEVEL 1 - RULE VIEW
+      ----------------------------- */}
+      {selectedCategory && !selectedRule && (
+        <div style={{ marginTop: "20px" }}>
+          <button onClick={() => setSelectedCategory(null)}>
+            ← Back to Categories
+          </button>
+
+          <h3>Rules in {selectedCategory}</h3>
+
+          <table
+            border="1"
+            cellPadding="8"
+            style={{ borderCollapse: "collapse", marginTop: "10px" }}
+          >
+            <thead>
+              <tr>
+                <th>Rule</th>
+                <th>Severity</th>
+                <th>Occurrences</th>
+                <th>Total Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRules.map((rule, idx) => (
+                <tr
+                  key={idx}
+                  onClick={() => setSelectedRule(rule)}
+                  style={{ cursor: "pointer" }}
                 >
-                  {pieData.map((_, index) => (
-                    <Cell key={index} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+                  <td>{rule.rule}</td>
+                  <td>{rule.severity}</td>
+                  <td>{rule.occurrences}</td>
+                  <td>{rule.total_score}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      <Card>
-        <CardContent>
-          <h3>Findings</h3>
-          <div style={{ maxHeight: 300, overflow: "auto" }}>
-            {(summary?.breakdown || []).map((f, i) => (
-              <div key={i} style={{ borderBottom: "1px solid #f70f0f", padding: 8 }}>
-                <strong>{f.rule || f.rule_name}</strong>
-                <div style={{ fontSize: 12 }}>
-                  {f.category} • {f.severity}
-                </div>
-              </div>
+      {/* -----------------------------
+          LEVEL 2 - RULE DETAILS
+      ----------------------------- */}
+      {selectedRule && selectedRuleData && (
+        <div style={{ marginTop: "20px" }}>
+          <button onClick={() => setSelectedRule(null)}>
+            ← Back to Rules
+          </button>
+
+          <h3>Rule Details</h3>
+
+          <p><b>Rule:</b> {selectedRuleData.rule}</p>
+          <p><b>Category:</b> {selectedRuleData.category}</p>
+          <p><b>Severity:</b> {selectedRuleData.severity}</p>
+          <p><b>Occurrences:</b> {selectedRuleData.occurrences}</p>
+          <p><b>Total Score:</b> {selectedRuleData.total_score}</p>
+
+          <h4>Event IDs</h4>
+          <ul>
+            {selectedRuleData.events.slice(0, 25).map((e, i) => (
+              <li key={i}>{e}</li>
             ))}
-          </div>
-        </CardContent>
-      </Card>
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
